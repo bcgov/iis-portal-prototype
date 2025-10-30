@@ -5,9 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Shield, Zap, Settings, TrendingUp, CheckCircle, ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { ResourceDialog, TechnicalDocsContent, APIReferenceContent, IntegrationGuideContent, ContactSupportContent } from "@/components/ResourceDialog";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [activeDialog, setActiveDialog] = useState<string | null>(null);
 
   const benefits = [
     {
@@ -140,15 +143,43 @@ const Index = () => {
             <div>
               <h3 className="font-semibold mb-4">Resources</h3>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-blue-100 hover:text-white">Technical Documentation</a></li>
-                <li><a href="#" className="text-blue-100 hover:text-white">API Reference</a></li>
-                <li><a href="#" className="text-blue-100 hover:text-white">Integration Guide</a></li>
+                <li>
+                  <button
+                    onClick={() => setActiveDialog('technical-docs')}
+                    className="text-blue-100 hover:text-white transition-colors"
+                  >
+                    Technical Documentation
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => setActiveDialog('api-reference')}
+                    className="text-blue-100 hover:text-white transition-colors"
+                  >
+                    API Reference
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => setActiveDialog('integration-guide')}
+                    className="text-blue-100 hover:text-white transition-colors"
+                  >
+                    Integration Guide
+                  </button>
+                </li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold mb-4">Support</h3>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-blue-100 hover:text-white">Contact Support</a></li>
+                <li>
+                  <button
+                    onClick={() => setActiveDialog('contact-support')}
+                    className="text-blue-100 hover:text-white transition-colors"
+                  >
+                    Contact Support
+                  </button>
+                </li>
                 <li><a href="#" className="text-blue-100 hover:text-white">Service Status</a></li>
                 <li><a href="#" className="text-blue-100 hover:text-white">Known Issues</a></li>
               </ul>
@@ -169,6 +200,39 @@ const Index = () => {
           </div>
         </div>
       </footer>
+
+      {/* Resource Dialogs */}
+      <ResourceDialog
+        open={activeDialog === 'technical-docs'}
+        onOpenChange={(open) => !open && setActiveDialog(null)}
+        title="Technical Documentation"
+      >
+        <TechnicalDocsContent />
+      </ResourceDialog>
+
+      <ResourceDialog
+        open={activeDialog === 'api-reference'}
+        onOpenChange={(open) => !open && setActiveDialog(null)}
+        title="API Reference"
+      >
+        <APIReferenceContent />
+      </ResourceDialog>
+
+      <ResourceDialog
+        open={activeDialog === 'integration-guide'}
+        onOpenChange={(open) => !open && setActiveDialog(null)}
+        title="Integration Guide"
+      >
+        <IntegrationGuideContent />
+      </ResourceDialog>
+
+      <ResourceDialog
+        open={activeDialog === 'contact-support'}
+        onOpenChange={(open) => !open && setActiveDialog(null)}
+        title="Contact Support"
+      >
+        <ContactSupportContent />
+      </ResourceDialog>
     </div>
   );
 };

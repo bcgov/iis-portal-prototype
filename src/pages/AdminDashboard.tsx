@@ -2,12 +2,84 @@
 import BCHeader from "@/components/BCHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { Users, Shield, Activity, AlertTriangle, Settings, FileText } from "lucide-react";
+import { Users, Shield, Activity, AlertTriangle, Settings, FileText, Check, X, CheckCircle } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { DemoControls } from "@/components/DemoControls";
+import { StatusBadge } from "@/components/StatusBadge";
+
+interface PendingRequest {
+  id: string;
+  name: string;
+  identityServices: string[];
+  description: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requestedBy: string;
+  requestDate: string;
+}
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([
+    {
+      id: "1",
+      name: "Health Portal System",
+      identityServices: ["BC Services Card", "BCeID"],
+      description: "Public health service for appointment booking and medical records access",
+      status: "pending",
+      requestedBy: "Patricia Lee",
+      requestDate: "2 hours ago"
+    },
+    {
+      id: "2",
+      name: "Transportation Management Portal",
+      identityServices: ["IDIR", "BCeID"],
+      description: "Internal system for managing transportation infrastructure projects",
+      status: "pending",
+      requestedBy: "Michael Chen",
+      requestDate: "5 hours ago"
+    }
+  ]);
+
+  const handleApprove = (requestId: string) => {
+    const request = pendingRequests.find(r => r.id === requestId);
+    setPendingRequests(prev => prev.map(r =>
+      r.id === requestId ? { ...r, status: 'approved' as const } : r
+    ));
+
+    toast({
+      title: "Integration approved",
+      description: `${request?.name} has been approved and the team will be notified.`,
+    });
+
+    // Remove from pending list after a short delay
+    setTimeout(() => {
+      setPendingRequests(prev => prev.filter(r => r.id !== requestId));
+    }, 2000);
+  };
+
+  const handleReject = (requestId: string) => {
+    const request = pendingRequests.find(r => r.id === requestId);
+    setPendingRequests(prev => prev.map(r =>
+      r.id === requestId ? { ...r, status: 'rejected' as const } : r
+    ));
+
+    toast({
+      title: "Integration rejected",
+      description: `${request?.name} has been rejected. The team will be notified.`,
+      variant: "destructive",
+    });
+
+    // Remove from pending list after a short delay
+    setTimeout(() => {
+      setPendingRequests(prev => prev.filter(r => r.id !== requestId));
+    }, 2000);
+  };
+
+  const activePendingCount = pendingRequests.filter(r => r.status === 'pending').length;
 
   const systemStats = [
     {
@@ -19,7 +91,7 @@ const AdminDashboard = () => {
     },
     {
       title: "Pending Approvals",
-      value: "8",
+      value: activePendingCount.toString(),
       change: "Requires attention",
       icon: AlertTriangle,
       color: "text-orange-600"
@@ -110,24 +182,56 @@ const AdminDashboard = () => {
                 <CardDescription>New integrations awaiting approval</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="border rounded-lg p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h4 className="font-semibold">Health Portal System</h4>
-                        <p className="text-sm text-muted-foreground">BC Services Card + BCeID</p>
-                      </div>
-                      <Badge variant="secondary">Pending Review</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Public health service for appointment booking and medical records access
-                    </p>
-                    <div className="flex gap-2">
-                      <Button size="sm">Approve</Button>
-                      <Button size="sm" variant="outline">Review</Button>
-                    </div>
+                {pendingRequests.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <CheckCircle className="h-12 w-12 mx-auto mb-3 text-green-500" />
+                    <p className="font-medium">All caught up!</p>
+                    <p className="text-sm">No pending integration requests at this time.</p>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingRequests.map((request) => (
+                      <div key={request.id} className="border rounded-lg p-4 transition-all">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h4 className="font-semibold">{request.name}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {request.identityServices.join(" + ")}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Requested by {request.requestedBy} • {request.requestDate}
+                            </p>
+                          </div>
+                          <StatusBadge status={request.status} />
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          {request.description}
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleApprove(request.id)}
+                            disabled={request.status !== 'pending'}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <Check className="mr-1 h-4 w-4" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleReject(request.id)}
+                            disabled={request.status !== 'pending'}
+                            className="hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+                          >
+                            <X className="mr-1 h-4 w-4" />
+                            Reject
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -171,6 +275,7 @@ const AdminDashboard = () => {
           </div>
         </div>
       </main>
+      <DemoControls />
     </div>
   );
 };

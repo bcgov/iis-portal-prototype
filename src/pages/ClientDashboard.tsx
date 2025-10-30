@@ -2,7 +2,6 @@
 import BCHeader from "@/components/BCHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useNavigate } from "react-router-dom";
 import { Plus, Activity, BookOpen, Code, Users, Edit, Trash2, TrendingUp, AlertCircle, CheckCircle, Eye } from "lucide-react";
@@ -10,74 +9,18 @@ import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, Pagi
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useIntegrations } from "@/hooks/useIntegrations";
+import { StatusBadge } from "@/components/StatusBadge";
+import { DemoControls } from "@/components/DemoControls";
+import { ResourceDialog, TechnicalDocsContent, APIReferenceContent, IntegrationGuideContent, ContactSupportContent } from "@/components/ResourceDialog";
 
 const ClientDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { integrations, deleteIntegration, isLoading } = useIntegrations();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [integrationToDelete, setIntegrationToDelete] = useState<{
-    id: string;
-    requestId: string;
-    name: string;
-    status: string;
-    environments: string[];
-    identityServices: string[];
-    lastActivity: string;
-    monthlyUsers: string;
-  } | null>(null);
-  const [integrationsList, setIntegrationsList] = useState([
-
-    {
-      id: "1",
-      requestId: "00006124",
-      name: "Citizen Services Portal",
-      status: "completed",
-      environments: ["Production", "Test"],
-      identityServices: ["BC Services Card", "BCeID"],
-      lastActivity: "2 hours ago",
-      monthlyUsers: "12.5K"
-    },
-    {
-      id: "2",
-      requestId: "00006125",
-      name: "Internal HR System",
-      status: "draft",
-      environments: ["Development"],
-      identityServices: ["IDIR"],
-      lastActivity: "1 day ago",
-      monthlyUsers: "0"
-    },
-    {
-      id: "3",
-      requestId: "00006126",
-      name: "Public Inquiry System",
-      status: "in-review",
-      environments: [],
-      identityServices: ["BC Services Card"],
-      lastActivity: "3 days ago",
-      monthlyUsers: "0"
-    },
-    {
-      id: "4",
-      requestId: "00006127",
-      name: "Education Portal",
-      status: "completed",
-      environments: ["Production", "Development", "Test"],
-      identityServices: ["BC Services Card", "BCeID", "IDIR"],
-      lastActivity: "5 hours ago",
-      monthlyUsers: "8.2K"
-    },
-    {
-      id: "5",
-      requestId: "00006128",
-      name: "License Application System",
-      status: "in-review",
-      environments: ["Test"],
-      identityServices: ["BC Services Card"],
-      lastActivity: "2 days ago",
-      monthlyUsers: "0"
-    }
-  ]);
+  const [integrationToDelete, setIntegrationToDelete] = useState<typeof integrations[0] | null>(null);
+  const [activeDialog, setActiveDialog] = useState<string | null>(null);
 
   const recentActivity = [
     {
@@ -102,49 +45,36 @@ const ClientDashboard = () => {
       title: "Implementation Guides",
       description: "Step-by-step integration documentation",
       icon: BookOpen,
-      action: () => console.log("View guides")
+      action: () => setActiveDialog('integration-guide')
     },
     {
       title: "Code Samples",
       description: "Ready-to-use implementation examples",
       icon: Code,
-      action: () => console.log("View samples")
+      action: () => setActiveDialog('technical-docs')
     },
     {
       title: "API Documentation",
       description: "Complete API reference and endpoints",
       icon: BookOpen,
-      action: () => console.log("View API docs")
+      action: () => setActiveDialog('api-reference')
     },
     {
       title: "Contact Support",
       description: "Get help from our technical team",
       icon: Users,
-      action: () => console.log("Contact support")
+      action: () => setActiveDialog('contact-support')
     }
   ];
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Completed</Badge>;
-      case 'in-review':
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200">In Review</Badge>;
-      case 'draft':
-        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-200">In Draft</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
-
-  const handleDeleteClick = (integration: typeof integrationsList[0]) => {
+  const handleDeleteClick = (integration: typeof integrations[0]) => {
     setIntegrationToDelete(integration);
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = () => {
     if (integrationToDelete) {
-      setIntegrationsList(integrationsList.filter(i => i.id !== integrationToDelete.id));
+      deleteIntegration(integrationToDelete.id);
       toast({
         title: "Integration deleted",
         description: `Integration "${integrationToDelete.name}" has been deleted.`,
@@ -278,7 +208,19 @@ const ClientDashboard = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {integrationsList.map((integration) => (
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        Loading integrations...
+                      </TableCell>
+                    </TableRow>
+                  ) : integrations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        No integrations found. Create your first integration to get started.
+                      </TableCell>
+                    </TableRow>
+                  ) : integrations.map((integration) => (
                     <TableRow 
                       key={integration.id} 
                       className="hover:bg-muted/50 transition-colors"
@@ -295,7 +237,7 @@ const ClientDashboard = () => {
                         {integration.name}
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(integration.status)}
+                        <StatusBadge status={integration.status} />
                       </TableCell>
                       <TableCell className="text-sm">
                         {integration.identityServices.join(", ")}
@@ -347,7 +289,7 @@ const ClientDashboard = () => {
             </div>
             
             {/* Pagination - shown if more than 10 integrations */}
-            {integrationsList.length > 10 && (
+            {integrations.length > 10 && (
               <div className="mt-4 flex justify-center">
                 <Pagination>
                   <PaginationContent>
@@ -441,6 +383,40 @@ const ClientDashboard = () => {
           </Card>
         </div>
       </main>
+      <DemoControls />
+
+      {/* Resource Dialogs */}
+      <ResourceDialog
+        open={activeDialog === 'technical-docs'}
+        onOpenChange={(open) => !open && setActiveDialog(null)}
+        title="Technical Documentation"
+      >
+        <TechnicalDocsContent />
+      </ResourceDialog>
+
+      <ResourceDialog
+        open={activeDialog === 'api-reference'}
+        onOpenChange={(open) => !open && setActiveDialog(null)}
+        title="API Reference"
+      >
+        <APIReferenceContent />
+      </ResourceDialog>
+
+      <ResourceDialog
+        open={activeDialog === 'integration-guide'}
+        onOpenChange={(open) => !open && setActiveDialog(null)}
+        title="Integration Guide"
+      >
+        <IntegrationGuideContent />
+      </ResourceDialog>
+
+      <ResourceDialog
+        open={activeDialog === 'contact-support'}
+        onOpenChange={(open) => !open && setActiveDialog(null)}
+        title="Contact Support"
+      >
+        <ContactSupportContent />
+      </ResourceDialog>
     </div>
   );
 };

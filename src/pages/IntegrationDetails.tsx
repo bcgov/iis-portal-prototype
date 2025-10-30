@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Download, Copy, CheckCircle, Info, Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -138,14 +139,12 @@ const IntegrationDetails = () => {
       <BCHeader />
       
       <main className="container mx-auto px-4 py-8">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/client')}
-          className="mb-4"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Dashboard
-        </Button>
+        <Breadcrumbs
+          items={[
+            { label: 'Dashboard', path: '/client' },
+            { label: integration.name }
+          ]}
+        />
 
         {/* Summary Card */}
         <Card className="mb-6 shadow-sm">
