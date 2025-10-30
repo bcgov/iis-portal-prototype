@@ -57,18 +57,12 @@ export const useIntegrations = () => {
     return integrations.find(int => int.id === id);
   };
 
-  const resetToDefaults = () => {
-    setIntegrations(initialIntegrations);
-    localStorage.setItem(STORAGE_KEYS.INTEGRATIONS, JSON.stringify(initialIntegrations));
-  };
-
   return {
     integrations,
     isLoading,
     addIntegration,
     updateIntegration,
     deleteIntegration,
-    getIntegrationById,
-    resetToDefaults
+    getIntegrationById
   };
 };
