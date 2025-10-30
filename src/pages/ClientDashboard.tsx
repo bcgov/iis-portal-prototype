@@ -11,7 +11,6 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useIntegrations } from "@/hooks/useIntegrations";
 import { StatusBadge } from "@/components/StatusBadge";
-import { DemoControls } from "@/components/DemoControls";
 import { ResourceDialog, TechnicalDocsContent, APIReferenceContent, IntegrationGuideContent, ContactSupportContent } from "@/components/ResourceDialog";
 
 const ClientDashboard = () => {
@@ -383,7 +382,6 @@ const ClientDashboard = () => {
           </Card>
         </div>
       </main>
-      <DemoControls />
 
       {/* Resource Dialogs */}
       <ResourceDialog

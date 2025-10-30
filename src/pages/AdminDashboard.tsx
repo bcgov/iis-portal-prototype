@@ -6,7 +6,6 @@ import { useNavigate } from "react-router-dom";
 import { Users, Shield, Activity, AlertTriangle, Settings, FileText, Check, X, CheckCircle } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { DemoControls } from "@/components/DemoControls";
 import { StatusBadge } from "@/components/StatusBadge";
 
 interface PendingRequest {
@@ -275,7 +274,6 @@ const AdminDashboard = () => {
           </div>
         </div>
       </main>
-      <DemoControls />
     </div>
   );
 };
