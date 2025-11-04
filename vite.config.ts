@@ -6,7 +6,7 @@ import { componentTagger } from "lovable-tagger";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   // GitHub Pages deployment configuration
-  base: mode === 'production' ? '/iis-portal-prototype/' : '/',
+  base: mode === 'production' ? '/iis-portal-prototype-v1/' : '/',
   server: {
     host: "::",
     port: 8080,
