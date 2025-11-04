@@ -17,7 +17,7 @@ const queryClient = new QueryClient();
 
 // GitHub Pages basename configuration
 const basename = import.meta.env.MODE === 'production'
-  ? '/iis-portal-prototype-v1/'
+  ? '/iis-portal-prototype-v2/'
   : '/';
 
 const App = () => (
