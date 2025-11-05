@@ -116,7 +116,7 @@ const InternalOnlyOffRamp = ({
         <CardContent className="space-y-6">
           <div className="text-center py-6">
             <p className="text-lg mb-6">
-              Based on your requirements for internal-only access, you'll be connected directly with our ADMS team for IDIR/Entra onboarding.
+              Based on your requirements for internal-only access, you'll be connected with the Web Access Management Team for IDIR onboarding.
             </p>
           </div>
 
@@ -139,7 +139,7 @@ const InternalOnlyOffRamp = ({
               </li>
               <li className="flex items-start space-x-3">
                 <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                <span>They will guide you through IDIR/Entra setup and configuration</span>
+                <span>They will guide you through IDIR setup and configuration</span>
               </li>
               <li className="flex items-start space-x-3">
                 <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>

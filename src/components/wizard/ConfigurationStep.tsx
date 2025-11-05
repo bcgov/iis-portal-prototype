@@ -5,13 +5,15 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, ChevronDown, Info, Save, Check, AlertTriangle } from "lucide-react";
+import { CalendarIcon, ChevronDown, Info, Save, Check, AlertTriangle, Smartphone, CreditCard, HelpCircle } from "lucide-react";
 import { WizardData } from "../IntegrationWizard";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -41,9 +43,9 @@ interface ConfigurationStepProps {
 
 const ConfigurationStep = ({ data, onUpdate, onUpdateRequirements }: ConfigurationStepProps) => {
   // Initialize attribute state from data
-  const [bcscOpen, setBcscOpen] = useState(true);
-  const [bceidOpen, setBceidOpen] = useState(true);
-  const [entraOpen, setEntraOpen] = useState(false);
+  const [bcscOpen, setBcscOpen] = useState(false);
+  const [personCredentialOpen, setPersonCredentialOpen] = useState(false);
+  const [bceidOpen, setBceidOpen] = useState(false);
   const [addressChecked, setAddressChecked] = useState(
     data.requirements.requiredAttributes?.includes('Address information') || false
   );
@@ -57,9 +59,9 @@ const ConfigurationStep = ({ data, onUpdate, onUpdateRequirements }: Configurati
   // Determine which IDPs were recommended
   const recommendedIDPs = data.solution.components || [];
   const hasBCSC = recommendedIDPs.some(c => c.toLowerCase().includes('bc services card') || c.toLowerCase().includes('bcsc'));
+  const hasPersonCredential = recommendedIDPs.some(c => c.toLowerCase().includes('person credential'));
   const hasBCeID = recommendedIDPs.some(c => c.toLowerCase().includes('bceid'));
-  const hasEntra = recommendedIDPs.some(c => c.toLowerCase().includes('entra') || c.toLowerCase().includes('azure') || c.toLowerCase().includes('microsoft'));
-  const hasAnyIDP = hasBCSC || hasBCeID || hasEntra;
+  const hasAnyIDP = hasBCSC || hasPersonCredential || hasBCeID;
 
   const [configData, setConfigData] = useState<ConfigurationData>(() => {
     const initialData: ConfigurationData = {
@@ -136,23 +138,33 @@ const ConfigurationStep = ({ data, onUpdate, onUpdateRequirements }: Configurati
 
         {hasAnyIDP ? (
           <div className="space-y-4">
-            {/* BC Services Card */}
+            {/* BC Services Card (or combined with Person Credential) */}
             {hasBCSC && (
               <Card className="border-2">
                 <Collapsible open={bcscOpen} onOpenChange={setBcscOpen}>
                   <CardHeader className="pb-3">
                     <CollapsibleTrigger className="flex items-center justify-between w-full group">
                       <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                          <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                          <CreditCard className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <CardTitle className="text-lg">BC Services Card</CardTitle>
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-lg">
+                            {hasPersonCredential ? "BC Services Card & Person Credential" : "BC Services Card"}
+                          </CardTitle>
+                        </div>
                       </div>
                       <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${bcscOpen ? 'rotate-180' : ''}`} />
                     </CollapsibleTrigger>
                   </CardHeader>
                   <CollapsibleContent>
                     <CardContent className="space-y-4">
+                      {/* Explanatory text when both are present */}
+                      {hasPersonCredential && (
+                        <p className="text-sm text-muted-foreground">
+                          Person Credential and BC Services Card share the same user attributes. Configure which attributes your application needs below.
+                        </p>
+                      )}
                       {/* Required attribute */}
                       <div className="flex items-start gap-3">
                         <Checkbox checked disabled className="mt-1" />
@@ -291,47 +303,6 @@ const ConfigurationStep = ({ data, onUpdate, onUpdateRequirements }: Configurati
                 </Collapsible>
               </Card>
             )}
-
-            {/* Microsoft Entra */}
-            {hasEntra && (
-              <Card className="border-2">
-                <Collapsible open={entraOpen} onOpenChange={setEntraOpen}>
-                  <CardHeader className="pb-3">
-                    <CollapsibleTrigger className="flex items-center justify-between w-full group">
-                      <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                          <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-                        </div>
-                        <CardTitle className="text-lg">Microsoft Entra</CardTitle>
-                      </div>
-                      <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${entraOpen ? 'rotate-180' : ''}`} />
-                    </CollapsibleTrigger>
-                  </CardHeader>
-                  <CollapsibleContent>
-                    <CardContent className="space-y-4">
-                      {/* Fixed attribute set */}
-                      <div className="flex items-start gap-3">
-                        <div className="w-2 h-2 rounded-full bg-foreground mt-2" />
-                        <div className="flex-1">
-                          <div className="font-medium">Fixed attribute set</div>
-                          <div className="text-sm text-muted-foreground">
-                            → Employee ID, Display name, Email address, Department
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Info box */}
-                      <Alert className="border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-950/20">
-                        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        <AlertDescription className="text-sm text-blue-900 dark:text-blue-100">
-                          Entra attributes are predetermined by your organization's Active Directory and cannot be customized through this portal.
-                        </AlertDescription>
-                      </Alert>
-                    </CardContent>
-                  </CollapsibleContent>
-                </Collapsible>
-              </Card>
-            )}
           </div>
         ) : (
           <Alert>
@@ -351,7 +322,8 @@ const ConfigurationStep = ({ data, onUpdate, onUpdateRequirements }: Configurati
             Configure access for each environment where users will authenticate
           </p>
         </div>
-        
+
+        {/* Show identity providers that will be configured */}
         <div className="flex flex-wrap gap-2">
           {data.solution.components.map((provider) => (
             <span key={provider} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
@@ -361,7 +333,7 @@ const ConfigurationStep = ({ data, onUpdate, onUpdateRequirements }: Configurati
         </div>
       </div>
 
-      {/* Environment Matrix */}
+      {/* Environment Matrix - Single table for all IDPs */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Environment Selection</CardTitle>
@@ -492,13 +464,13 @@ const ConfigurationStep = ({ data, onUpdate, onUpdateRequirements }: Configurati
                         </div>
 
                         {(() => {
-                          // Check if BC Services Card or BCeID are in recommended solutions
-                          const hasBCServicesOrBCeID = data.solution.components.some(
-                            provider => provider === "BC Services Card" || provider.includes("BCeID")
+                          // Check if BC Services Card, Person Credential, or BCeID are in recommended solutions
+                          const hasBCServicesOrBCeIDOrPersonCredential = data.solution.components.some(
+                            provider => provider === "BC Services Card" || provider === "Person Credential" || provider.includes("BCeID")
                           );
-                          
-                          if (!hasBCServicesOrBCeID) return null;
-                          
+
+                          if (!hasBCServicesOrBCeIDOrPersonCredential) return null;
+
                           return (
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                               <div className="flex items-start space-x-2">
@@ -506,7 +478,7 @@ const ConfigurationStep = ({ data, onUpdate, onUpdateRequirements }: Configurati
                                 <div>
                                   <p className="text-sm font-medium text-blue-900">Production Environment Notice</p>
                                   <p className="text-sm text-blue-700 mt-1">
-                                    BC Services Card and BCeID production environments require additional approvals. Our team will guide you through this approval process.
+                                    BC Services Card, Person Credential, and BCeID production environments require additional approvals. Our team will guide you through this approval process.
                                   </p>
                                 </div>
                               </div>

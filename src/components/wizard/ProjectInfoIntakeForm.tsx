@@ -58,20 +58,20 @@ const ProjectInfoIntakeForm = ({
       label: "External Only",
       description: "My product serves the public accessing government services (e.g., citizens, residents, or business owners accessing services for their own needs)",
       userTypes: [
-        "BC residents/Canadian residents",
+        "BC residents",
+        "Canadian residents",
         "International users",
         "Individuals representing businesses or organizations"
       ]
     },
     {
       value: "internal",
-      label: "Internal Only", 
-      description: "My product is used to deliver or support government services (e.g., government staff, contractors, or authorized partner businesses operating on behalf of the province)",
+      label: "Internal Only",
+      description: "My product is used to deliver or support government services (e.g., government staff, contractors, or authorized partner organizations operating on behalf of the province)",
       userTypes: [
         "Government employees",
         "Government contractors",
-        "Broader public service employees",
-        "Business entities that have a B2B relationship with the government to deliver services on behalf or in parallel with the province"
+        "Broader public service employees (with IDIR access)"
       ]
     },
     {
@@ -348,13 +348,20 @@ const ProjectInfoIntakeForm = ({
                     {userCategoryOptions
                       .find(cat => cat.value === "internal")
                       ?.userTypes.map((userType) => (
-                        <div key={userType} className="flex items-center space-x-3 p-2 rounded hover:bg-accent/30 transition-colors">
-                          <Checkbox
-                            id={`internal-${userType}`}
-                            checked={data.userTypes.includes(userType)}
-                            onCheckedChange={(checked) => handleUserTypeChange(userType, !!checked)}
-                          />
-                          <Label htmlFor={`internal-${userType}`} className="text-sm font-normal cursor-pointer">{userType}</Label>
+                        <div key={userType} className="space-y-1">
+                          <div className="flex items-center space-x-3 p-2 rounded hover:bg-accent/30 transition-colors">
+                            <Checkbox
+                              id={`internal-${userType}`}
+                              checked={data.userTypes.includes(userType)}
+                              onCheckedChange={(checked) => handleUserTypeChange(userType, !!checked)}
+                            />
+                            <Label htmlFor={`internal-${userType}`} className="text-sm font-normal cursor-pointer">{userType}</Label>
+                          </div>
+                          {userType === "Broader public service employees (with IDIR access)" && (
+                            <p className="text-xs text-muted-foreground ml-9 pl-2">
+                              Employees from Crown corporations, health authorities, or other public sector organizations with government-issued IDIR credentials
+                            </p>
+                          )}
                         </div>
                       ))}
                   </div>
@@ -371,13 +378,20 @@ const ProjectInfoIntakeForm = ({
                     {userCategoryOptions
                       .find(cat => cat.value === data.userCategory)
                       ?.userTypes.map((userType) => (
-                        <div key={userType} className="flex items-center space-x-3 p-2 rounded hover:bg-accent/30 transition-colors">
-                          <Checkbox
-                            id={userType}
-                            checked={data.userTypes.includes(userType)}
-                            onCheckedChange={(checked) => handleUserTypeChange(userType, !!checked)}
-                          />
-                          <Label htmlFor={userType} className="text-sm font-normal cursor-pointer">{userType}</Label>
+                        <div key={userType} className="space-y-1">
+                          <div className="flex items-center space-x-3 p-2 rounded hover:bg-accent/30 transition-colors">
+                            <Checkbox
+                              id={userType}
+                              checked={data.userTypes.includes(userType)}
+                              onCheckedChange={(checked) => handleUserTypeChange(userType, !!checked)}
+                            />
+                            <Label htmlFor={userType} className="text-sm font-normal cursor-pointer">{userType}</Label>
+                          </div>
+                          {userType === "Broader public service employees (with IDIR access)" && (
+                            <p className="text-xs text-muted-foreground ml-9 pl-2">
+                              Employees from Crown corporations, health authorities, or other public sector organizations with government-issued IDIR credentials
+                            </p>
+                          )}
                         </div>
                       ))}
                   </div>

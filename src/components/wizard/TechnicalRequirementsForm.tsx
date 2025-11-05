@@ -122,8 +122,8 @@ const TechnicalRequirementsForm = ({
   // Generate attribute options based on selected user types
   const getAttributeOptionsByUserType = (userType: string) => {
     const attributeOptions: string[] = [];
-    
-    if (userType === "BC residents/Canadian residents") {
+
+    if (userType === "BC residents" || userType === "Canadian residents") {
       attributeOptions.push(
         "Basic Identity (Name, unique identifier)",
         "Contact Information (Email address, phone number)",
@@ -169,8 +169,9 @@ const TechnicalRequirementsForm = ({
   };
 
   // Get external and internal user types
-  const externalUserTypes = userTypes.filter(type => 
-    type === "BC residents/Canadian residents" || 
+  const externalUserTypes = userTypes.filter(type =>
+    type === "BC residents" ||
+    type === "Canadian residents" ||
     type === "International users" ||
     type === "Individuals representing businesses or organizations"
   );

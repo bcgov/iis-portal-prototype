@@ -11,7 +11,17 @@ export const useIntegrations = () => {
       try {
         const stored = localStorage.getItem(STORAGE_KEYS.INTEGRATIONS);
         if (stored) {
-          setIntegrations(JSON.parse(stored));
+          const parsed = JSON.parse(stored);
+          // Validate and normalize the data
+          const normalized = Array.isArray(parsed) ? parsed.map((int: any) => ({
+            ...int,
+            // Ensure required fields exist
+            identityServices: int.identityServices || int.solution?.components || [],
+            environments: int.environments || [],
+            status: int.status || 'draft',
+            lastActivity: int.lastActivity || 'Unknown'
+          })) : [];
+          setIntegrations(normalized);
         } else {
           // Initialize with default data
           setIntegrations(initialIntegrations);
@@ -19,7 +29,10 @@ export const useIntegrations = () => {
         }
       } catch (error) {
         console.error('Error loading integrations:', error);
+        // On error, clear localStorage and use initial data
+        localStorage.removeItem(STORAGE_KEYS.INTEGRATIONS);
         setIntegrations(initialIntegrations);
+        localStorage.setItem(STORAGE_KEYS.INTEGRATIONS, JSON.stringify(initialIntegrations));
       } finally {
         setIsLoading(false);
       }

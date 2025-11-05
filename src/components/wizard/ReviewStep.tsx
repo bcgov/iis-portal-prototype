@@ -3,7 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, User, Shield, Settings, Globe, Pencil, Users } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { CheckCircle, User, Shield, Settings, Globe, Pencil, Users, Smartphone, CreditCard, HelpCircle } from "lucide-react";
 import { WizardData } from "../IntegrationWizard";
 
 interface ReviewStepProps {
@@ -14,12 +15,9 @@ interface ReviewStepProps {
 const ReviewStep = ({ data, onEditStep }: ReviewStepProps) => {
   return (
     <div className="space-y-6">
-      <div className="text-center space-y-2">
-        <CheckCircle className="h-12 w-12 text-green-600 mx-auto" />
-        <h3 className="text-2xl font-semibold text-primary">Integration Ready</h3>
-        <p className="text-muted-foreground">
-          Review your configuration below and submit to complete the setup
-        </p>
+      <div className="space-y-2">
+        <h3 className="text-2xl font-semibold text-foreground">Review and submit integration</h3>
+        <p className="text-muted-foreground">Review your configuration below and submit to complete the setup</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -39,40 +37,32 @@ const ReviewStep = ({ data, onEditStep }: ReviewStepProps) => {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div>
-              <span className="font-medium">Product Name:</span> {data.projectInfo.productName}
-            </div>
-            <div>
-              <span className="font-medium">Ministry:</span> {data.projectInfo.ministry}
-            </div>
-            {data.projectInfo.privacyZone && (
-              <div>
-                <span className="font-medium">Privacy Zone:</span> {data.projectInfo.privacyZone}
-              </div>
-            )}
-            <div>
-              <span className="font-medium">User Types:</span>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {data.projectInfo.userTypes.map((userType) => (
-                  <Badge key={userType} variant="outline">{userType}</Badge>
-                ))}
-              </div>
-            </div>
-            
-            <Separator className="my-3" />
-            
-            <div className="space-y-2">
-              <div className="font-medium text-sm">Product Team</div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="border rounded-md p-2">
-                  <div className="font-medium text-xs text-muted-foreground mb-1">Product Owner</div>
-                  <div className="font-medium">{data.projectInfo.productOwnerName}</div>
-                  <div className="text-muted-foreground text-xs">{data.projectInfo.productOwnerEmail}</div>
+            <div className="border rounded-lg p-3">
+              <div className="space-y-2 text-sm">
+                <div>
+                  <span className="font-medium">Product Name:</span> {data.projectInfo.productName}
                 </div>
-                <div className="border rounded-md p-2">
-                  <div className="font-medium text-xs text-muted-foreground mb-1">Technical Lead</div>
-                  <div className="font-medium">{data.projectInfo.technicalLeadName}</div>
-                  <div className="text-muted-foreground text-xs">{data.projectInfo.technicalLeadEmail}</div>
+                <div>
+                  <span className="font-medium">Ministry:</span> {data.projectInfo.ministry}
+                </div>
+                {data.projectInfo.privacyZone && (
+                  <div>
+                    <span className="font-medium">Privacy Zone:</span> {data.projectInfo.privacyZone}
+                  </div>
+                )}
+                <div>
+                  <span className="font-medium">User Types:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {data.projectInfo.userTypes.map((userType) => (
+                      <Badge key={userType} variant="outline">{userType}</Badge>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <span className="font-medium">Product Owner:</span> {data.projectInfo.productOwnerName} ({data.projectInfo.productOwnerEmail})
+                </div>
+                <div>
+                  <span className="font-medium">Technical Lead:</span> {data.projectInfo.technicalLeadName} ({data.projectInfo.technicalLeadEmail})
                 </div>
               </div>
             </div>
@@ -139,17 +129,23 @@ const ReviewStep = ({ data, onEditStep }: ReviewStepProps) => {
           </CardHeader>
           <CardContent className="space-y-3">
             {(() => {
-              // Group user types by their identity provider
-              const providerGroups: Record<string, string[]> = {};
+              // Separate logic for handling coupled credentials
               const dataClassification = data.requirements.dataClassification || "";
-              
-              data.projectInfo.userTypes.forEach((userType) => {
+              const hasBCResidents = data.projectInfo.userTypes.includes("BC residents");
+              const hasCanadianResidents = data.projectInfo.userTypes.includes("Canadian residents");
+              const hasCoupledCredentials = hasBCResidents &&
+                (dataClassification === "protected-a" || dataClassification === "protected-b" || dataClassification === "protected-c");
+
+              // Group other user types normally
+              const otherUserTypes = data.projectInfo.userTypes.filter(
+                type => type !== "BC residents" && type !== "Canadian residents"
+              );
+
+              const providerGroups: Record<string, string[]> = {};
+
+              otherUserTypes.forEach((userType) => {
                 let provider = "";
-                
                 switch (userType) {
-                  case "BC residents/Canadian residents":
-                    provider = (dataClassification === "public" || dataClassification === "protected-a") ? "BCeID Basic" : "BC Services Card";
-                    break;
                   case "International users":
                     provider = "BCeID Basic";
                     break;
@@ -157,37 +153,124 @@ const ReviewStep = ({ data, onEditStep }: ReviewStepProps) => {
                     provider = "BCeID Business";
                     break;
                   case "Government employees":
-                    provider = "IDIR";
+                    provider = dataClassification === "protected-b" || dataClassification === "protected-c" ? "IDIR + MFA" : "IDIR";
                     break;
                   case "Government contractors":
-                    provider = "Entra Guest";
+                    provider = dataClassification === "protected-b" || dataClassification === "protected-c" ? "IDIR + MFA" : "IDIR";
                     break;
-                  case "Broader public service employees":
-                  case "Business entities that have a B2B relationship with the government to deliver services on behalf or in parallel with the province":
-                    provider = "Entra Guest";
+                  case "Broader public service employees (with IDIR access)":
+                    provider = dataClassification === "protected-b" || dataClassification === "protected-c" ? "IDIR + MFA" : "IDIR";
                     break;
                   default:
                     provider = "To be determined";
                 }
-                
+
                 if (!providerGroups[provider]) {
                   providerGroups[provider] = [];
                 }
                 providerGroups[provider].push(userType);
               });
-              
-              return Object.entries(providerGroups).map(([provider, userTypes]) => (
-                <div key={provider} className="border rounded-lg p-3">
-                  <div className="font-medium mb-2">{provider}</div>
-                  <div className="flex flex-wrap gap-1">
-                    {userTypes.map((userType) => (
-                      <Badge key={userType} variant="outline">
-                        {userType}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              ));
+
+              // Build a consistent structure for all user types
+              const userTypeGroups: Record<string, { provider: string; icon?: any; badge?: string; tooltip?: string }[]> = {};
+
+              data.projectInfo.userTypes.forEach((userType) => {
+                if (!userTypeGroups[userType]) {
+                  userTypeGroups[userType] = [];
+                }
+
+                switch (userType) {
+                  case "BC residents":
+                    if (dataClassification === "public") {
+                      userTypeGroups[userType].push({ provider: "BCeID Basic" });
+                    } else if (dataClassification === "protected-a" || dataClassification === "protected-b" || dataClassification === "protected-c") {
+                      userTypeGroups[userType].push({
+                        provider: "Person Credential",
+                        icon: Smartphone,
+                        tooltip: "Modern smartphone sign-in - most users will prefer this method."
+                      });
+                      userTypeGroups[userType].push({
+                        provider: "BC Services Card",
+                        icon: CreditCard,
+                        tooltip: "Available for users who prefer physical cards or need accessibility options."
+                      });
+                    } else {
+                      userTypeGroups[userType].push({ provider: "BC Services Card" });
+                    }
+                    break;
+                  case "Canadian residents":
+                    if (dataClassification === "public" || dataClassification === "protected-a") {
+                      userTypeGroups[userType].push({ provider: "BCeID Basic" });
+                    } else {
+                      userTypeGroups[userType].push({ provider: "BC Services Card" });
+                    }
+                    break;
+                  case "International users":
+                    userTypeGroups[userType].push({ provider: "BCeID Basic" });
+                    break;
+                  case "Individuals representing businesses or organizations":
+                    userTypeGroups[userType].push({ provider: "BCeID Business" });
+                    break;
+                  case "Government employees":
+                    if (dataClassification === "protected-b" || dataClassification === "protected-c") {
+                      userTypeGroups[userType].push({ provider: "IDIR + MFA" });
+                    } else {
+                      userTypeGroups[userType].push({ provider: "IDIR" });
+                    }
+                    break;
+                  case "Government contractors":
+                    if (dataClassification === "protected-b" || dataClassification === "protected-c") {
+                      userTypeGroups[userType].push({ provider: "IDIR + MFA" });
+                    } else {
+                      userTypeGroups[userType].push({ provider: "IDIR" });
+                    }
+                    break;
+                  case "Broader public service employees (with IDIR access)":
+                    if (dataClassification === "protected-b" || dataClassification === "protected-c") {
+                      userTypeGroups[userType].push({ provider: "IDIR + MFA" });
+                    } else {
+                      userTypeGroups[userType].push({ provider: "IDIR" });
+                    }
+                    break;
+                }
+              });
+
+              return (
+                <>
+                  {Object.entries(userTypeGroups).map(([userType, providers]) => (
+                    <div key={userType} className="border rounded-lg p-3">
+                      <div className="font-medium mb-2">{userType}</div>
+                      <div className="ml-4 space-y-2">
+                        {providers.map((item, idx) => {
+                          const Icon = item.icon;
+                          const isLast = idx === providers.length - 1;
+
+                          return (
+                            <div key={idx} className={!isLast ? "pb-2 border-b border-border" : ""}>
+                              <div className="flex items-center gap-2">
+                                {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                                <div className="font-medium text-sm">{item.provider}</div>
+                                {item.tooltip && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-xs">
+                                        <p className="text-sm">{item.tooltip}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              );
             })()}
           </CardContent>
         </Card>
@@ -208,34 +291,47 @@ const ReviewStep = ({ data, onEditStep }: ReviewStepProps) => {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="border rounded-lg p-3">
-              <h4 className="font-medium mb-2">{data.projectInfo.productName || 'Product'}</h4>
-              <div className="space-y-1 text-sm">
-                <div>
-                  <span className="font-medium">Environments:</span>{' '}
-                  {[
-                    data.configuration.development && 'Development',
-                    data.configuration.test && 'Test', 
-                    data.configuration.production && 'Production'
-                  ].filter(Boolean).join(', ')}
+            {(() => {
+              // Check if we have coupled credentials
+              const dataClassification = data.requirements.dataClassification || "";
+              const hasBCResidents = data.projectInfo.userTypes.includes("BC residents");
+              const hasCoupledCredentials = hasBCResidents &&
+                (dataClassification === "protected-a" || dataClassification === "protected-b" || dataClassification === "protected-c");
+
+              const selectedEnvironments = [
+                data.configuration.development && 'Development',
+                data.configuration.test && 'Test',
+                data.configuration.production && 'Production'
+              ].filter(Boolean).join(', ');
+
+              // Single configuration display for all cases
+              return (
+                <div className="border rounded-lg p-3">
+                  <h4 className="font-medium mb-2">{data.projectInfo.productName || 'Product'}</h4>
+                  <div className="space-y-1 text-sm">
+                    <div>
+                      <span className="font-medium">Environments:</span> {selectedEnvironments}
+                    </div>
+                    {data.configuration.development && (
+                      <div>
+                        <span className="font-medium">Dev App:</span> {data.configuration.developmentConfig?.applicationName}
+                      </div>
+                    )}
+                    {data.configuration.test && (
+                      <div>
+                        <span className="font-medium">Test App:</span> {data.configuration.testConfig?.applicationName}
+                      </div>
+                    )}
+                    {data.configuration.production && (
+                      <div>
+                        <span className="font-medium">Prod App:</span> {data.configuration.productionConfig?.applicationName}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {data.configuration.development && (
-                  <div>
-                    <span className="font-medium">Dev App:</span> {data.configuration.developmentConfig?.applicationName}
-                  </div>
-                )}
-                {data.configuration.test && (
-                  <div>
-                    <span className="font-medium">Test App:</span> {data.configuration.testConfig?.applicationName}
-                  </div>
-                )}
-                {data.configuration.production && (
-                  <div>
-                    <span className="font-medium">Prod App:</span> {data.configuration.productionConfig?.applicationName}
-                  </div>
-                )}
-              </div>
-            </div>
+              );
+            })()}
+
             
             {data.requirements.requiredAttributes && data.requirements.requiredAttributes.length > 0 && (
               <>
