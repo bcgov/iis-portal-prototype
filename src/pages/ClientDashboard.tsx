@@ -21,6 +21,9 @@ const ClientDashboard = () => {
   const [integrationToDelete, setIntegrationToDelete] = useState<typeof integrations[0] | null>(null);
   const [activeDialog, setActiveDialog] = useState<string | null>(null);
 
+  // Debug logging
+  console.log('ClientDashboard render:', { isLoading, integrationsCount: integrations.length, integrations });
+
   const recentActivity = [
     {
       action: "Integration 00006124 updated configuration",
@@ -239,11 +242,11 @@ const ClientDashboard = () => {
                         <StatusBadge status={integration.status} />
                       </TableCell>
                       <TableCell className="text-sm">
-                        {integration.identityServices.join(", ")}
+                        {integration.identityServices?.join(", ") || "-"}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {integration.environments.length > 0 
-                          ? integration.environments.join(", ") 
+                        {integration.environments?.length > 0
+                          ? integration.environments.join(", ")
                           : "-"
                         }
                       </TableCell>

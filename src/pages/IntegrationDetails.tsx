@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Download, Copy, CheckCircle, Info, Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -31,69 +33,216 @@ const IntegrationDetails = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [copiedEnv, setCopiedEnv] = useState<string | null>(null);
+  const [copiedPresentationId, setCopiedPresentationId] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isTechConfigOpen, setIsTechConfigOpen] = useState(false);
 
-  // Mock data - in a real app this would come from an API
-  const integration = {
-    id: id,
-    requestId: "00006128",
-    name: "Citizen Services Portal",
-    status: "Active",
-    ministry: "Citizens' Services",
-    userTypes: ["BC residents/Canadian residents", "Government employees"],
-    privacyZone: "Citizens' Services (Citizen)",
-    identityProviders: ["BC Services Card", "BCeID Basic", "IDIR"],
-    productOwner: {
-      name: "Jane Smith",
-      email: "jane.smith@gov.bc.ca"
-    },
-    technicalLead: {
-      name: "John Doe",
-      email: "john.doe@gov.bc.ca"
-    },
-    clientType: "Confidential",
-    clientProtocol: "OpenID Connect",
-    useCase: "Browser Login and Service Account",
-    dataClassification: "Protected B",
-    environments: [
-      {
-        name: "Development",
-        idps: ["IDIR - MFA", "Basic BCeID"],
-        ready: true,
-        clientId: "dev-client-123",
-        redirectUris: ["https://dev.example.com/callback"],
-        json: {
-          clientId: "dev-client-123",
-          authority: "https://dev.loginproxy.gov.bc.ca",
-          redirectUri: "https://dev.example.com/callback"
-        }
-      },
-      {
-        name: "Test",
-        idps: ["IDIR - MFA", "Basic BCeID"],
-        ready: true,
-        clientId: "test-client-456",
-        redirectUris: ["https://test.example.com/callback"],
-        json: {
-          clientId: "test-client-456",
-          authority: "https://test.loginproxy.gov.bc.ca",
-          redirectUri: "https://test.example.com/callback"
-        }
-      },
-      {
-        name: "Production",
-        idps: ["IDIR - MFA", "Basic BCeID"],
-        ready: false,
-        clientId: "prod-client-789",
-        redirectUris: ["https://example.com/callback"],
-        json: {
-          clientId: "prod-client-789",
-          authority: "https://loginproxy.gov.bc.ca",
-          redirectUri: "https://example.com/callback"
-        }
+  // Load integration data from localStorage
+  const loadIntegrationData = () => {
+    const storedIntegrations = JSON.parse(localStorage.getItem('iis-integrations') || '[]');
+    const submittedIntegration = storedIntegrations.find((int: any) => int.id === id);
+
+    if (submittedIntegration) {
+      // Check if this is wizard-based data or legacy mock data
+      const hasWizardData = submittedIntegration.projectInfo && submittedIntegration.configuration;
+
+      if (!hasWizardData) {
+        // Return legacy mock data structure as-is
+        return {
+          id: submittedIntegration.id,
+          requestId: submittedIntegration.requestId,
+          name: submittedIntegration.name,
+          status: submittedIntegration.status || "Active",
+          ministry: submittedIntegration.ministry,
+          userTypes: ["BC residents"], // Default for mock data
+          privacyZone: "Citizens' Services (Citizen)",
+          identityProviders: submittedIntegration.identityServices || [],
+          productOwner: submittedIntegration.productOwner,
+          technicalLead: submittedIntegration.technicalLead,
+          clientType: "Confidential",
+          clientProtocol: "OpenID Connect",
+          useCase: "Browser Login",
+          dataClassification: "Protected B",
+          environments: submittedIntegration.environments?.map((env: string) => ({
+            name: env,
+            idps: submittedIntegration.identityServices || [],
+            ready: env !== "Production",
+            clientId: `${env.toLowerCase()}-client-${id?.slice(-6)}`,
+            redirectUris: [`https://${env.toLowerCase()}.example.com/callback`],
+            json: {
+              clientId: `${env.toLowerCase()}-client-${id?.slice(-6)}`,
+              authority: `https://${env === "Production" ? "" : env.toLowerCase() + "."}loginproxy.gov.bc.ca`,
+              redirectUri: `https://${env.toLowerCase()}.example.com/callback`
+            }
+          })) || []
+        };
       }
-    ]
+
+      // Map wizard data structure to integration details structure
+      const envList = [];
+      if (submittedIntegration.configuration.development) {
+        envList.push({
+          name: "Development",
+          idps: submittedIntegration.solution.components || [],
+          ready: true,
+          clientId: `dev-client-${id?.slice(-6)}`,
+          redirectUris: submittedIntegration.configuration.developmentConfig?.redirectUris?.split('\n') || [],
+          json: {
+            clientId: `dev-client-${id?.slice(-6)}`,
+            authority: "https://dev.loginproxy.gov.bc.ca",
+            redirectUri: submittedIntegration.configuration.developmentConfig?.redirectUris?.split('\n')[0] || ""
+          }
+        });
+      }
+      if (submittedIntegration.configuration.test) {
+        envList.push({
+          name: "Test",
+          idps: submittedIntegration.solution.components || [],
+          ready: true,
+          clientId: `test-client-${id?.slice(-6)}`,
+          redirectUris: submittedIntegration.configuration.testConfig?.redirectUris?.split('\n') || [],
+          json: {
+            clientId: `test-client-${id?.slice(-6)}`,
+            authority: "https://test.loginproxy.gov.bc.ca",
+            redirectUri: submittedIntegration.configuration.testConfig?.redirectUris?.split('\n')[0] || ""
+          }
+        });
+      }
+      if (submittedIntegration.configuration.production) {
+        envList.push({
+          name: "Production",
+          idps: submittedIntegration.solution.components || [],
+          ready: false,
+          clientId: `prod-client-${id?.slice(-6)}`,
+          redirectUris: submittedIntegration.configuration.productionConfig?.redirectUris?.split('\n') || [],
+          json: {
+            clientId: `prod-client-${id?.slice(-6)}`,
+            authority: "https://loginproxy.gov.bc.ca",
+            redirectUri: submittedIntegration.configuration.productionConfig?.redirectUris?.split('\n')[0] || ""
+          }
+        });
+      }
+
+      return {
+        id: submittedIntegration.id,
+        requestId: `0000${id?.slice(-4)}`,
+        name: submittedIntegration.projectInfo.productName,
+        status: "Active",
+        ministry: submittedIntegration.projectInfo.ministry,
+        userTypes: submittedIntegration.projectInfo.userTypes,
+        privacyZone: submittedIntegration.projectInfo.privacyZone,
+        identityProviders: submittedIntegration.solution.components || [],
+        productOwner: {
+          name: submittedIntegration.projectInfo.productOwnerName,
+          email: submittedIntegration.projectInfo.productOwnerEmail
+        },
+        technicalLead: {
+          name: submittedIntegration.projectInfo.technicalLeadName,
+          email: submittedIntegration.projectInfo.technicalLeadEmail
+        },
+        clientType: submittedIntegration.requirements.clientType,
+        clientProtocol: submittedIntegration.requirements.clientProtocol,
+        useCase: submittedIntegration.requirements.useCase,
+        dataClassification: submittedIntegration.requirements.dataClassification,
+        environments: envList
+      };
+    }
+
+    // Fallback to mock data if not found
+    return {
+      id: id,
+      requestId: "00006128",
+      name: "Citizen Services Portal",
+      status: "Active",
+      ministry: "Citizens' Services",
+      userTypes: ["BC residents", "Canadian residents", "Government employees"],
+      privacyZone: "Citizens' Services (Citizen)",
+      identityProviders: ["BC Services Card", "Person Credential", "BCeID Basic", "IDIR"],
+      productOwner: {
+        name: "Jane Smith",
+        email: "jane.smith@gov.bc.ca"
+      },
+      technicalLead: {
+        name: "John Doe",
+        email: "john.doe@gov.bc.ca"
+      },
+      clientType: "Confidential",
+      clientProtocol: "OpenID Connect",
+      useCase: "Browser Login and Service Account",
+      dataClassification: "Protected B",
+      environments: [
+        {
+          name: "Development",
+          idps: ["IDIR + MFA", "BCeID Basic"],
+          ready: true,
+          clientId: "dev-client-123",
+          redirectUris: ["https://dev.example.com/callback"],
+          json: {
+            clientId: "dev-client-123",
+            authority: "https://dev.loginproxy.gov.bc.ca",
+            redirectUri: "https://dev.example.com/callback"
+          }
+        },
+        {
+          name: "Test",
+          idps: ["IDIR + MFA", "BCeID Basic"],
+          ready: true,
+          clientId: "test-client-456",
+          redirectUris: ["https://test.example.com/callback"],
+          json: {
+            clientId: "test-client-456",
+            authority: "https://test.loginproxy.gov.bc.ca",
+            redirectUri: "https://test.example.com/callback"
+          }
+        },
+        {
+          name: "Production",
+          idps: ["IDIR + MFA", "BCeID Basic"],
+          ready: false,
+          clientId: "prod-client-789",
+          redirectUris: ["https://example.com/callback"],
+          json: {
+            clientId: "prod-client-789",
+            authority: "https://loginproxy.gov.bc.ca",
+            redirectUri: "https://example.com/callback"
+          }
+        }
+      ]
+    };
+  };
+
+  const integration = loadIntegrationData();
+
+  // Check if Person Credential is provisioned
+  const hasPersonCredential = integration.identityProviders.some(
+    (idp: string) => idp.toLowerCase().includes('person credential')
+  );
+
+  // Generate a unique presentation configuration ID (25 characters alphanumeric)
+  const generatePresentationId = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Excluding similar looking chars
+    const segments = ['PC', '', '', '', '', '', ''];
+    for (let i = 1; i < segments.length; i++) {
+      let segment = '';
+      const length = i === segments.length - 1 ? 2 : 3;
+      for (let j = 0; j < length; j++) {
+        segment += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      segments[i] = segment;
+    }
+    return segments.join('-');
+  };
+
+  const presentationConfigId = `PC-${id?.slice(-20).toUpperCase()}` || generatePresentationId();
+
+  const handleCopyPresentationId = () => {
+    navigator.clipboard.writeText(presentationConfigId);
+    setCopiedPresentationId(true);
+    toast({
+      title: "Copied to clipboard",
+      description: "Presentation Configuration ID has been copied.",
+    });
+    setTimeout(() => setCopiedPresentationId(false), 2000);
   };
 
   const handleCopy = (envName: string, jsonData: any) => {
@@ -343,9 +492,53 @@ const IntegrationDetails = () => {
               </div>
 
               <TabsContent value="technical" className="p-6 space-y-6">
+                {/* Person Credential Presentation Request Configuration */}
+                {hasPersonCredential && (
+                  <div>
+                    <h2 className="text-xl font-semibold mb-4">Person Credential Presentation Request Configuration</h2>
+                    <Card className="border-2 border-primary/20 bg-primary/5">
+                      <CardContent className="p-6 space-y-4">
+                        <div>
+                          <Label className="text-sm font-semibold text-foreground mb-2 block">
+                            Presentation Configuration ID
+                          </Label>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-background border-2 border-border rounded-md px-4 py-3 font-mono text-sm">
+                              {presentationConfigId}
+                            </div>
+                            <Button
+                              onClick={handleCopyPresentationId}
+                              variant="outline"
+                              size="sm"
+                              className="shrink-0"
+                            >
+                              {copiedPresentationId ? (
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                              ) : (
+                                <Copy className="h-4 w-4 mr-2" />
+                              )}
+                              {copiedPresentationId ? "Copied" : "Copy"}
+                            </Button>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-2">
+                            This unique identifier is used to configure Person Credential attribute mapping for your integration.
+                          </p>
+                        </div>
+
+                        <Alert className="border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-950/20">
+                          <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          <AlertDescription className="text-sm text-blue-900 dark:text-blue-100">
+                            <strong>Note:</strong> Currently, this ID is provided by the Digital Credentials team. Future automation will generate this automatically upon integration submission.
+                          </AlertDescription>
+                        </Alert>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
                 <div>
                   <h2 className="text-xl font-semibold mb-4">Installation JSONs</h2>
-                  
+
                   <div className="space-y-4">
                     {integration.environments.map((env) => (
                       <Card key={env.name} className="border-2">
