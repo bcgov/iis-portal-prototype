@@ -30,16 +30,11 @@ const InternalOnlyOffRamp = ({
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    
+
     // Simulate submission process
     setTimeout(() => {
       setIsSubmitting(false);
       setIsSubmitted(true);
-      
-      // After showing confirmation, redirect to dashboard
-      setTimeout(() => {
-        onSubmit();
-      }, 2000);
     }, 1000);
   };
 
@@ -66,14 +61,21 @@ const InternalOnlyOffRamp = ({
             <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-6" />
             <h1 className="text-2xl font-bold text-green-800 mb-4">Request Submitted Successfully!</h1>
             <p className="text-muted-foreground mb-6">
-              Your integration request has been forwarded to our ADMS team. You will receive a confirmation email shortly.
+              Your integration request has been forwarded to the Web Access Management Team. You will receive a confirmation email shortly.
             </p>
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
               <p className="text-sm text-green-800">
-                <strong>Status:</strong> Referred to ADMS Team
+                <strong>Status:</strong> Referred to Web Access Management Team
               </p>
             </div>
-            <p className="text-sm text-muted-foreground">Redirecting to dashboard...</p>
+            <div className="flex justify-end">
+              <Button
+                onClick={() => navigate('/client')}
+                className="bg-primary hover:bg-primary/90"
+              >
+                Return to Dashboard
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -116,7 +118,7 @@ const InternalOnlyOffRamp = ({
         <CardContent className="space-y-6">
           <div className="text-center py-6">
             <p className="text-lg mb-6">
-              Based on your requirements for internal-only access, you'll be connected directly with our ADMS team for IDIR/Entra onboarding.
+              Based on your requirements for internal-only access, you'll be connected with the Web Access Management Team for IDIR/Entra onboarding.
             </p>
           </div>
 
@@ -135,7 +137,7 @@ const InternalOnlyOffRamp = ({
             <ul className="space-y-3">
               <li className="flex items-start space-x-3">
                 <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                <span>Our ADMS team will contact you within 2-3 business days</span>
+                <span>The Web Access Management Team will contact you to discuss next steps</span>
               </li>
               <li className="flex items-start space-x-3">
                 <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
