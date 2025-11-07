@@ -5,13 +5,16 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, ChevronDown, Info, Save, Check, AlertTriangle } from "lucide-react";
+import { CalendarIcon, ChevronDown, Info, Save, Check, AlertTriangle, Smartphone, CreditCard, HelpCircle, X } from "lucide-react";
 import { WizardData } from "../IntegrationWizard";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -39,27 +42,75 @@ interface ConfigurationStepProps {
   onUpdateRequirements?: (data: { requiredAttributes: string[] }) => void;
 }
 
+// Attribute packages
+const ATTRIBUTE_PACKAGES = {
+  name: {
+    id: 'name',
+    label: 'Name',
+    description: 'Includes: Given name, family name, display name',
+    attributes: ['display_name', 'given_name', 'family_name']
+  },
+  sendInformation: {
+    id: 'sendInformation',
+    label: 'Send Information',
+    description: 'Includes: Name, mailing address, and email address',
+    attributes: ['display_name', 'given_name', 'family_name', 'email', 'street_address', 'locality', 'region', 'postal_code', 'country']
+  },
+  ageVerification: {
+    id: 'ageVerification',
+    label: 'Age Verification',
+    description: 'Includes: Send information package plus date of birth',
+    attributes: ['display_name', 'given_name', 'family_name', 'email', 'street_address', 'locality', 'region', 'postal_code', 'country', 'birthdate']
+  }
+};
+
+// All available BC Services Card attributes
+const ALL_ATTRIBUTES = [
+  { value: 'display_name', label: 'Name' },
+  { value: 'given_name', label: 'Given Name' },
+  { value: 'given_names', label: 'Given Names' },
+  { value: 'family_name', label: 'Surname' },
+  { value: 'birthdate', label: 'Date of Birth' },
+  { value: 'age', label: 'Age' },
+  { value: 'age_19_or_over', label: 'Age 19 Or Over' },
+  { value: 'gender', label: 'Sex' },
+  { value: 'email', label: 'Email Address' },
+  { value: 'street_address', label: 'Street Address' },
+  { value: 'locality', label: 'City/Town' },
+  { value: 'region', label: 'State Or Province' },
+  { value: 'postal_code', label: 'Postal Code' },
+  { value: 'country', label: 'Country' },
+  { value: 'address', label: 'Address (all address lines)' },
+  { value: 'sub', label: 'User Identifier' },
+  { value: 'identity_assurance_level', label: 'Identity Assurance Level' },
+  { value: 'identity_assurance_level1', label: 'Identity Assurance Level 1' },
+  { value: 'identity_assurance_level2', label: 'Identity Assurance Level 2' },
+  { value: 'identity_assurance_level3', label: 'Identity Assurance Level 3' },
+  { value: 'identification_level', label: 'Identification Level' },
+  { value: 'user_type', label: 'User Type' },
+  { value: 'transaction_identifier', label: 'Transaction Identifier' },
+  { value: 'transaction_type', label: 'Transaction Type' },
+  { value: 'client_id', label: 'Relying Party Identifier' },
+  { value: 'sector_identifier_uri', label: 'Privacy Zone Identifier' },
+  { value: 'authentication_zone_identifier', label: 'Authentication Zone Identifier' },
+  { value: 'authoritative_party_identifier', label: 'Authoritative Party Identifier' },
+  { value: 'authoritative_party_name', label: 'Authoritative Party Name' }
+];
+
 const ConfigurationStep = ({ data, onUpdate, onUpdateRequirements }: ConfigurationStepProps) => {
   // Initialize attribute state from data
-  const [bcscOpen, setBcscOpen] = useState(true);
-  const [bceidOpen, setBceidOpen] = useState(true);
-  const [entraOpen, setEntraOpen] = useState(false);
-  const [addressChecked, setAddressChecked] = useState(
-    data.requirements.requiredAttributes?.includes('Address information') || false
-  );
-  const [contactChecked, setContactChecked] = useState(
-    data.requirements.requiredAttributes?.includes('Contact information') || false
-  );
-  const [demographicsChecked, setDemographicsChecked] = useState(
-    data.requirements.requiredAttributes?.includes('Demographics') || false
-  );
+  const [bceidOpen, setBceidOpen] = useState(false);
+  const [customAttributesOpen, setCustomAttributesOpen] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<string>('name');
+  const [customAttributes, setCustomAttributes] = useState<string[]>([]);
+  const [multiSelectOpen, setMultiSelectOpen] = useState(false);
 
   // Determine which IDPs were recommended
   const recommendedIDPs = data.solution.components || [];
   const hasBCSC = recommendedIDPs.some(c => c.toLowerCase().includes('bc services card') || c.toLowerCase().includes('bcsc'));
+  const hasPersonCredential = recommendedIDPs.some(c => c.toLowerCase().includes('person credential'));
   const hasBCeID = recommendedIDPs.some(c => c.toLowerCase().includes('bceid'));
-  const hasEntra = recommendedIDPs.some(c => c.toLowerCase().includes('entra') || c.toLowerCase().includes('azure') || c.toLowerCase().includes('microsoft'));
-  const hasAnyIDP = hasBCSC || hasBCeID || hasEntra;
+  const hasAnyIDP = hasBCSC || hasPersonCredential || hasBCeID;
 
   const [configData, setConfigData] = useState<ConfigurationData>(() => {
     const initialData: ConfigurationData = {
@@ -88,6 +139,56 @@ const ConfigurationStep = ({ data, onUpdate, onUpdateRequirements }: Configurati
   });
 
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
+  // Handle package selection
+  const handlePackageChange = (packageId: string) => {
+    setSelectedPackage(packageId);
+    setCustomAttributes([]); // Clear custom attributes when selecting a package
+
+    // Update requirements with package attributes
+    if (onUpdateRequirements) {
+      const pkg = ATTRIBUTE_PACKAGES[packageId as keyof typeof ATTRIBUTE_PACKAGES];
+      if (pkg) {
+        const attributeLabels = pkg.attributes.map(attr => {
+          const attrObj = ALL_ATTRIBUTES.find(a => a.value === attr);
+          return attrObj ? attrObj.label : attr;
+        });
+        onUpdateRequirements({ requiredAttributes: attributeLabels });
+      }
+    }
+
+    // Persist to configuration data
+    onUpdate({
+      attributePackage: packageId,
+      selectedCustomAttributes: []
+    });
+  };
+
+  // Handle custom attribute toggle
+  const handleCustomAttributeToggle = (attributeValue: string) => {
+    setCustomAttributes(prev => {
+      const newCustomAttrs = prev.includes(attributeValue)
+        ? prev.filter(attr => attr !== attributeValue)
+        : [...prev, attributeValue];
+
+      // Update requirements with custom attributes
+      if (onUpdateRequirements) {
+        const attributeLabels = newCustomAttrs.map(attr => {
+          const attrObj = ALL_ATTRIBUTES.find(a => a.value === attr);
+          return attrObj ? attrObj.label : attr;
+        });
+        onUpdateRequirements({ requiredAttributes: attributeLabels });
+      }
+
+      // Persist to configuration data
+      onUpdate({
+        attributePackage: '',
+        selectedCustomAttributes: newCustomAttrs
+      });
+
+      return newCustomAttrs;
+    });
+  };
 
   // Auto-save functionality
   useEffect(() => {
@@ -136,118 +237,173 @@ const ConfigurationStep = ({ data, onUpdate, onUpdateRequirements }: Configurati
 
         {hasAnyIDP ? (
           <div className="space-y-4">
-            {/* BC Services Card */}
+            {/* BC Services Card (or combined with Person Credential) */}
             {hasBCSC && (
               <Card className="border-2">
-                <Collapsible open={bcscOpen} onOpenChange={setBcscOpen}>
-                  <CardHeader className="pb-3">
-                    <CollapsibleTrigger className="flex items-center justify-between w-full group">
-                      <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                          <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-                        </div>
-                        <CardTitle className="text-lg">BC Services Card</CardTitle>
-                      </div>
-                      <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${bcscOpen ? 'rotate-180' : ''}`} />
-                    </CollapsibleTrigger>
-                  </CardHeader>
-                  <CollapsibleContent>
-                    <CardContent className="space-y-4">
-                      {/* Required attribute */}
-                      <div className="flex items-start gap-3">
-                        <Checkbox checked disabled className="mt-1" />
-                        <div className="flex-1">
-                          <div className="font-medium">Basic identity (Required)</div>
-                          <div className="text-sm text-muted-foreground">
-                            → Name, Date of birth, Unique identifier
-                          </div>
-                        </div>
-                      </div>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                      <CreditCard className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-lg">
+                        {hasPersonCredential ? "BC Services Card & Person Credential" : "BC Services Card"}
+                      </CardTitle>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Explanatory text when both are present */}
+                  {hasPersonCredential && (
+                    <p className="text-sm text-muted-foreground">
+                      Person Credential and BC Services Card share the same user attributes. Configure which attributes your application needs below.
+                    </p>
+                  )}
 
-                      {/* Optional attribute with warning */}
-                      <div className="space-y-2">
-                        <div className="flex items-start gap-3">
-                          <Checkbox 
-                            checked={addressChecked} 
-                            onCheckedChange={(checked) => {
-                              setAddressChecked(checked === true);
-                              if (onUpdateRequirements) {
-                                const newAttrs = checked 
-                                  ? [...(data.requirements.requiredAttributes || []).filter(a => a !== 'Address information'), 'Address information']
-                                  : (data.requirements.requiredAttributes || []).filter(a => a !== 'Address information');
-                                onUpdateRequirements({ requiredAttributes: newAttrs });
-                              }
-                            }}
-                            className="mt-1" 
-                          />
+                  {/* Package Selection */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-base font-medium">Select Attribute Package</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Choose the attribute package that best fits your application's needs. Most applications use one of these standard packages.
+                      </p>
+                    </div>
+
+                    <RadioGroup value={selectedPackage} onValueChange={handlePackageChange} className="space-y-3">
+                      {Object.values(ATTRIBUTE_PACKAGES).map((pkg) => (
+                        <div key={pkg.id} className="flex items-start space-x-3 space-y-0">
+                          <RadioGroupItem value={pkg.id} id={pkg.id} className="mt-1" />
                           <div className="flex-1">
-                            <div className="font-medium">Address information</div>
+                            <Label htmlFor={pkg.id} className="font-medium cursor-pointer">
+                              {pkg.label}
+                            </Label>
+                            <p className="text-sm text-muted-foreground">{pkg.description}</p>
                           </div>
                         </div>
-                        {addressChecked && (
-                          <Alert className="border-l-4 border-l-orange-500 bg-orange-50 dark:bg-orange-950/20">
-                            <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                            <AlertDescription className="text-sm">
-                              <div className="font-semibold text-orange-900 dark:text-orange-100 mb-1">
-                                Requires MISO/MPO approval
+                      ))}
+                    </RadioGroup>
+                  </div>
+
+                  {/* Info box */}
+                  <Alert className="border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-950/20">
+                    <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <AlertDescription className="text-sm text-blue-900 dark:text-blue-100">
+                      Selected attributes will require production approval. Timeline may vary based on complexity.
+                    </AlertDescription>
+                  </Alert>
+
+                  {/* Custom Attributes Section */}
+                  <Collapsible open={customAttributesOpen} onOpenChange={setCustomAttributesOpen}>
+                    <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-primary hover:underline">
+                      <ChevronDown className={`h-4 w-4 transition-transform ${customAttributesOpen ? 'rotate-180' : ''}`} />
+                      Need specific attributes?
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-4">
+                      <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          Select individual attributes for custom configuration
+                        </p>
+
+                        {/* Multi-select dropdown */}
+                        <Popover open={multiSelectOpen} onOpenChange={setMultiSelectOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-full justify-between"
+                            >
+                              <span className="text-sm">
+                                {customAttributes.length > 0
+                                  ? `${customAttributes.length} attribute${customAttributes.length > 1 ? 's' : ''} selected`
+                                  : 'Select attributes...'}
+                              </span>
+                              <ChevronDown className="h-4 w-4 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[400px] p-0" align="start">
+                            <div className="max-h-[300px] overflow-y-auto">
+                              <div className="sticky top-0 bg-background border-b p-2 flex gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="flex-1"
+                                  onClick={() => {
+                                    const allAttrValues = ALL_ATTRIBUTES.map(a => a.value);
+                                    setCustomAttributes(allAttrValues);
+                                    setSelectedPackage('');
+                                    if (onUpdateRequirements) {
+                                      onUpdateRequirements({ requiredAttributes: ALL_ATTRIBUTES.map(a => a.label) });
+                                    }
+                                    onUpdate({
+                                      attributePackage: '',
+                                      selectedCustomAttributes: allAttrValues
+                                    });
+                                  }}
+                                >
+                                  Select All
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="flex-1"
+                                  onClick={() => {
+                                    setCustomAttributes([]);
+                                    if (onUpdateRequirements) {
+                                      onUpdateRequirements({ requiredAttributes: [] });
+                                    }
+                                    onUpdate({
+                                      attributePackage: '',
+                                      selectedCustomAttributes: []
+                                    });
+                                  }}
+                                >
+                                  Clear All
+                                </Button>
                               </div>
-                              <div className="text-orange-800 dark:text-orange-200">
-                                💡 Only request if essential for service delivery
+                              <div className="p-2 space-y-1">
+                                {ALL_ATTRIBUTES.map((attr) => (
+                                  <div
+                                    key={attr.value}
+                                    className="flex items-center space-x-2 p-2 rounded hover:bg-accent cursor-pointer"
+                                    onClick={() => {
+                                      handleCustomAttributeToggle(attr.value);
+                                      setSelectedPackage(''); // Clear package selection when using custom
+                                    }}
+                                  >
+                                    <Checkbox
+                                      checked={customAttributes.includes(attr.value)}
+                                      onCheckedChange={() => {
+                                        handleCustomAttributeToggle(attr.value);
+                                        setSelectedPackage(''); // Clear package selection when using custom
+                                      }}
+                                    />
+                                    <Label className="flex-1 cursor-pointer text-sm">{attr.label}</Label>
+                                  </div>
+                                ))}
                               </div>
-                            </AlertDescription>
-                          </Alert>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+
+                        {customAttributes.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {customAttributes.map((attrValue) => {
+                              const attr = ALL_ATTRIBUTES.find(a => a.value === attrValue);
+                              return (
+                                <Badge key={attrValue} variant="secondary" className="gap-1">
+                                  {attr?.label}
+                                  <X
+                                    className="h-3 w-3 cursor-pointer"
+                                    onClick={() => handleCustomAttributeToggle(attrValue)}
+                                  />
+                                </Badge>
+                              );
+                            })}
+                          </div>
                         )}
                       </div>
-
-                      {/* Simple optional attributes */}
-                      <div className="flex items-start gap-3">
-                        <Checkbox 
-                          checked={contactChecked} 
-                          onCheckedChange={(checked) => {
-                            setContactChecked(checked === true);
-                            if (onUpdateRequirements) {
-                              const newAttrs = checked 
-                                ? [...(data.requirements.requiredAttributes || []).filter(a => a !== 'Contact information'), 'Contact information']
-                                : (data.requirements.requiredAttributes || []).filter(a => a !== 'Contact information');
-                              onUpdateRequirements({ requiredAttributes: newAttrs });
-                            }
-                          }}
-                          className="mt-1" 
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium">Contact information</div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <Checkbox 
-                          checked={demographicsChecked} 
-                          onCheckedChange={(checked) => {
-                            setDemographicsChecked(checked === true);
-                            if (onUpdateRequirements) {
-                              const newAttrs = checked 
-                                ? [...(data.requirements.requiredAttributes || []).filter(a => a !== 'Demographics'), 'Demographics']
-                                : (data.requirements.requiredAttributes || []).filter(a => a !== 'Demographics');
-                              onUpdateRequirements({ requiredAttributes: newAttrs });
-                            }
-                          }}
-                          className="mt-1" 
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium">Demographics</div>
-                        </div>
-                      </div>
-
-                      {/* Info box */}
-                      <Alert className="border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-950/20">
-                        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        <AlertDescription className="text-sm text-blue-900 dark:text-blue-100">
-                          Selected attributes will require production approval. Timeline may vary based on complexity.
-                        </AlertDescription>
-                      </Alert>
-                    </CardContent>
-                  </CollapsibleContent>
-                </Collapsible>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </CardContent>
               </Card>
             )}
 
@@ -291,47 +447,6 @@ const ConfigurationStep = ({ data, onUpdate, onUpdateRequirements }: Configurati
                 </Collapsible>
               </Card>
             )}
-
-            {/* Microsoft Entra */}
-            {hasEntra && (
-              <Card className="border-2">
-                <Collapsible open={entraOpen} onOpenChange={setEntraOpen}>
-                  <CardHeader className="pb-3">
-                    <CollapsibleTrigger className="flex items-center justify-between w-full group">
-                      <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                          <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-                        </div>
-                        <CardTitle className="text-lg">Microsoft Entra</CardTitle>
-                      </div>
-                      <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${entraOpen ? 'rotate-180' : ''}`} />
-                    </CollapsibleTrigger>
-                  </CardHeader>
-                  <CollapsibleContent>
-                    <CardContent className="space-y-4">
-                      {/* Fixed attribute set */}
-                      <div className="flex items-start gap-3">
-                        <div className="w-2 h-2 rounded-full bg-foreground mt-2" />
-                        <div className="flex-1">
-                          <div className="font-medium">Fixed attribute set</div>
-                          <div className="text-sm text-muted-foreground">
-                            → Employee ID, Display name, Email address, Department
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Info box */}
-                      <Alert className="border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-950/20">
-                        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        <AlertDescription className="text-sm text-blue-900 dark:text-blue-100">
-                          Entra attributes are predetermined by your organization's Active Directory and cannot be customized through this portal.
-                        </AlertDescription>
-                      </Alert>
-                    </CardContent>
-                  </CollapsibleContent>
-                </Collapsible>
-              </Card>
-            )}
           </div>
         ) : (
           <Alert>
@@ -351,7 +466,8 @@ const ConfigurationStep = ({ data, onUpdate, onUpdateRequirements }: Configurati
             Configure access for each environment where users will authenticate
           </p>
         </div>
-        
+
+        {/* Show identity providers that will be configured */}
         <div className="flex flex-wrap gap-2">
           {data.solution.components.map((provider) => (
             <span key={provider} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
@@ -361,7 +477,7 @@ const ConfigurationStep = ({ data, onUpdate, onUpdateRequirements }: Configurati
         </div>
       </div>
 
-      {/* Environment Matrix */}
+      {/* Environment Matrix - Single table for all IDPs */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Environment Selection</CardTitle>
@@ -492,13 +608,13 @@ const ConfigurationStep = ({ data, onUpdate, onUpdateRequirements }: Configurati
                         </div>
 
                         {(() => {
-                          // Check if BC Services Card or BCeID are in recommended solutions
-                          const hasBCServicesOrBCeID = data.solution.components.some(
-                            provider => provider === "BC Services Card" || provider.includes("BCeID")
+                          // Check if BC Services Card, Person Credential, or BCeID are in recommended solutions
+                          const hasBCServicesOrBCeIDOrPersonCredential = data.solution.components.some(
+                            provider => provider === "BC Services Card" || provider === "Person Credential" || provider.includes("BCeID")
                           );
-                          
-                          if (!hasBCServicesOrBCeID) return null;
-                          
+
+                          if (!hasBCServicesOrBCeIDOrPersonCredential) return null;
+
                           return (
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                               <div className="flex items-start space-x-2">
@@ -506,7 +622,7 @@ const ConfigurationStep = ({ data, onUpdate, onUpdateRequirements }: Configurati
                                 <div>
                                   <p className="text-sm font-medium text-blue-900">Production Environment Notice</p>
                                   <p className="text-sm text-blue-700 mt-1">
-                                    BC Services Card and BCeID production environments require additional approvals. Our team will guide you through this approval process.
+                                    BC Services Card, Person Credential, and BCeID production environments require additional approvals. Our team will guide you through this approval process.
                                   </p>
                                 </div>
                               </div>

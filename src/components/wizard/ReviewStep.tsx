@@ -3,7 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, User, Shield, Settings, Globe, Pencil, Users } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { CheckCircle, User, Shield, Settings, Globe, Pencil, Users, Smartphone, CreditCard, HelpCircle } from "lucide-react";
 import { WizardData } from "../IntegrationWizard";
 
 interface ReviewStepProps {
@@ -11,15 +12,61 @@ interface ReviewStepProps {
   onEditStep?: (step: number) => void;
 }
 
+// Attribute packages for display
+const ATTRIBUTE_PACKAGES = {
+  name: {
+    label: 'Name',
+    description: 'Given name, Family name, Display name'
+  },
+  sendInformation: {
+    label: 'Send Information',
+    description: 'Name, Mailing address, Email address'
+  },
+  ageVerification: {
+    label: 'Age Verification',
+    description: 'Name, Mailing address, Email address, Date of birth'
+  }
+};
+
+// All available attributes for mapping
+const ALL_ATTRIBUTES = [
+  { value: 'display_name', label: 'Name' },
+  { value: 'given_name', label: 'Given Name' },
+  { value: 'given_names', label: 'Given Names' },
+  { value: 'family_name', label: 'Surname' },
+  { value: 'birthdate', label: 'Date of Birth' },
+  { value: 'age', label: 'Age' },
+  { value: 'age_19_or_over', label: 'Age 19 Or Over' },
+  { value: 'gender', label: 'Sex' },
+  { value: 'email', label: 'Email Address' },
+  { value: 'street_address', label: 'Street Address' },
+  { value: 'locality', label: 'City/Town' },
+  { value: 'region', label: 'State Or Province' },
+  { value: 'postal_code', label: 'Postal Code' },
+  { value: 'country', label: 'Country' },
+  { value: 'address', label: 'Address (all address lines)' },
+  { value: 'sub', label: 'User Identifier' },
+  { value: 'identity_assurance_level', label: 'Identity Assurance Level' },
+  { value: 'identity_assurance_level1', label: 'Identity Assurance Level 1' },
+  { value: 'identity_assurance_level2', label: 'Identity Assurance Level 2' },
+  { value: 'identity_assurance_level3', label: 'Identity Assurance Level 3' },
+  { value: 'identification_level', label: 'Identification Level' },
+  { value: 'user_type', label: 'User Type' },
+  { value: 'transaction_identifier', label: 'Transaction Identifier' },
+  { value: 'transaction_type', label: 'Transaction Type' },
+  { value: 'client_id', label: 'Relying Party Identifier' },
+  { value: 'sector_identifier_uri', label: 'Privacy Zone Identifier' },
+  { value: 'authentication_zone_identifier', label: 'Authentication Zone Identifier' },
+  { value: 'authoritative_party_identifier', label: 'Authoritative Party Identifier' },
+  { value: 'authoritative_party_name', label: 'Authoritative Party Name' }
+];
+
 const ReviewStep = ({ data, onEditStep }: ReviewStepProps) => {
   return (
     <div className="space-y-6">
-      <div className="text-center space-y-2">
-        <CheckCircle className="h-12 w-12 text-green-600 mx-auto" />
-        <h3 className="text-2xl font-semibold text-primary">Integration Ready</h3>
-        <p className="text-muted-foreground">
-          Review your configuration below and submit to complete the setup
-        </p>
+      <div className="space-y-2">
+        <h3 className="text-2xl font-semibold text-foreground">Review and submit integration</h3>
+        <p className="text-muted-foreground">Review your configuration below and submit to complete the setup</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -39,40 +86,32 @@ const ReviewStep = ({ data, onEditStep }: ReviewStepProps) => {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div>
-              <span className="font-medium">Product Name:</span> {data.projectInfo.productName}
-            </div>
-            <div>
-              <span className="font-medium">Ministry:</span> {data.projectInfo.ministry}
-            </div>
-            {data.projectInfo.privacyZone && (
-              <div>
-                <span className="font-medium">Privacy Zone:</span> {data.projectInfo.privacyZone}
-              </div>
-            )}
-            <div>
-              <span className="font-medium">User Types:</span>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {data.projectInfo.userTypes.map((userType) => (
-                  <Badge key={userType} variant="outline">{userType}</Badge>
-                ))}
-              </div>
-            </div>
-            
-            <Separator className="my-3" />
-            
-            <div className="space-y-2">
-              <div className="font-medium text-sm">Product Team</div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="border rounded-md p-2">
-                  <div className="font-medium text-xs text-muted-foreground mb-1">Product Owner</div>
-                  <div className="font-medium">{data.projectInfo.productOwnerName}</div>
-                  <div className="text-muted-foreground text-xs">{data.projectInfo.productOwnerEmail}</div>
+            <div className="border rounded-lg p-3">
+              <div className="space-y-2 text-sm">
+                <div>
+                  <span className="font-medium">Product Name:</span> {data.projectInfo.productName}
                 </div>
-                <div className="border rounded-md p-2">
-                  <div className="font-medium text-xs text-muted-foreground mb-1">Technical Lead</div>
-                  <div className="font-medium">{data.projectInfo.technicalLeadName}</div>
-                  <div className="text-muted-foreground text-xs">{data.projectInfo.technicalLeadEmail}</div>
+                <div>
+                  <span className="font-medium">Ministry:</span> {data.projectInfo.ministry}
+                </div>
+                {data.projectInfo.privacyZone && (
+                  <div>
+                    <span className="font-medium">Privacy Zone:</span> {data.projectInfo.privacyZone}
+                  </div>
+                )}
+                <div>
+                  <span className="font-medium">User Types:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {data.projectInfo.userTypes.map((userType) => (
+                      <Badge key={userType} variant="outline">{userType}</Badge>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <span className="font-medium">Product Owner:</span> {data.projectInfo.productOwnerName} ({data.projectInfo.productOwnerEmail})
+                </div>
+                <div>
+                  <span className="font-medium">Technical Lead:</span> {data.projectInfo.technicalLeadName} ({data.projectInfo.technicalLeadEmail})
                 </div>
               </div>
             </div>
@@ -139,17 +178,23 @@ const ReviewStep = ({ data, onEditStep }: ReviewStepProps) => {
           </CardHeader>
           <CardContent className="space-y-3">
             {(() => {
-              // Group user types by their identity provider
-              const providerGroups: Record<string, string[]> = {};
+              // Separate logic for handling coupled credentials
               const dataClassification = data.requirements.dataClassification || "";
-              
-              data.projectInfo.userTypes.forEach((userType) => {
+              const hasBCResidents = data.projectInfo.userTypes.includes("BC residents");
+              const hasCanadianResidents = data.projectInfo.userTypes.includes("Canadian residents");
+              const hasCoupledCredentials = hasBCResidents &&
+                (dataClassification === "protected-a" || dataClassification === "protected-b" || dataClassification === "protected-c");
+
+              // Group other user types normally
+              const otherUserTypes = data.projectInfo.userTypes.filter(
+                type => type !== "BC residents" && type !== "Canadian residents"
+              );
+
+              const providerGroups: Record<string, string[]> = {};
+
+              otherUserTypes.forEach((userType) => {
                 let provider = "";
-                
                 switch (userType) {
-                  case "BC residents/Canadian residents":
-                    provider = (dataClassification === "public" || dataClassification === "protected-a") ? "BCeID Basic" : "BC Services Card";
-                    break;
                   case "International users":
                     provider = "BCeID Basic";
                     break;
@@ -157,37 +202,124 @@ const ReviewStep = ({ data, onEditStep }: ReviewStepProps) => {
                     provider = "BCeID Business";
                     break;
                   case "Government employees":
-                    provider = "IDIR";
+                    provider = dataClassification === "protected-b" || dataClassification === "protected-c" ? "IDIR + MFA" : "IDIR";
                     break;
                   case "Government contractors":
-                    provider = "Entra Guest";
+                    provider = dataClassification === "protected-b" || dataClassification === "protected-c" ? "IDIR + MFA" : "IDIR";
                     break;
-                  case "Broader public service employees":
-                  case "Business entities that have a B2B relationship with the government to deliver services on behalf or in parallel with the province":
-                    provider = "Entra Guest";
+                  case "Broader public service employees (with IDIR access)":
+                    provider = dataClassification === "protected-b" || dataClassification === "protected-c" ? "IDIR + MFA" : "IDIR";
                     break;
                   default:
                     provider = "To be determined";
                 }
-                
+
                 if (!providerGroups[provider]) {
                   providerGroups[provider] = [];
                 }
                 providerGroups[provider].push(userType);
               });
-              
-              return Object.entries(providerGroups).map(([provider, userTypes]) => (
-                <div key={provider} className="border rounded-lg p-3">
-                  <div className="font-medium mb-2">{provider}</div>
-                  <div className="flex flex-wrap gap-1">
-                    {userTypes.map((userType) => (
-                      <Badge key={userType} variant="outline">
-                        {userType}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              ));
+
+              // Build a consistent structure for all user types
+              const userTypeGroups: Record<string, { provider: string; icon?: any; badge?: string; tooltip?: string }[]> = {};
+
+              data.projectInfo.userTypes.forEach((userType) => {
+                if (!userTypeGroups[userType]) {
+                  userTypeGroups[userType] = [];
+                }
+
+                switch (userType) {
+                  case "BC residents":
+                    if (dataClassification === "public") {
+                      userTypeGroups[userType].push({ provider: "BCeID Basic" });
+                    } else if (dataClassification === "protected-a" || dataClassification === "protected-b" || dataClassification === "protected-c") {
+                      userTypeGroups[userType].push({
+                        provider: "Person Credential",
+                        icon: Smartphone,
+                        tooltip: "Modern smartphone sign-in - most users will prefer this method."
+                      });
+                      userTypeGroups[userType].push({
+                        provider: "BC Services Card",
+                        icon: CreditCard,
+                        tooltip: "Available for users who prefer physical cards or need accessibility options."
+                      });
+                    } else {
+                      userTypeGroups[userType].push({ provider: "BC Services Card" });
+                    }
+                    break;
+                  case "Canadian residents":
+                    if (dataClassification === "public" || dataClassification === "protected-a") {
+                      userTypeGroups[userType].push({ provider: "BCeID Basic" });
+                    } else {
+                      userTypeGroups[userType].push({ provider: "BC Services Card" });
+                    }
+                    break;
+                  case "International users":
+                    userTypeGroups[userType].push({ provider: "BCeID Basic" });
+                    break;
+                  case "Individuals representing businesses or organizations":
+                    userTypeGroups[userType].push({ provider: "BCeID Business" });
+                    break;
+                  case "Government employees":
+                    if (dataClassification === "protected-b" || dataClassification === "protected-c") {
+                      userTypeGroups[userType].push({ provider: "IDIR + MFA" });
+                    } else {
+                      userTypeGroups[userType].push({ provider: "IDIR" });
+                    }
+                    break;
+                  case "Government contractors":
+                    if (dataClassification === "protected-b" || dataClassification === "protected-c") {
+                      userTypeGroups[userType].push({ provider: "IDIR + MFA" });
+                    } else {
+                      userTypeGroups[userType].push({ provider: "IDIR" });
+                    }
+                    break;
+                  case "Broader public service employees (with IDIR access)":
+                    if (dataClassification === "protected-b" || dataClassification === "protected-c") {
+                      userTypeGroups[userType].push({ provider: "IDIR + MFA" });
+                    } else {
+                      userTypeGroups[userType].push({ provider: "IDIR" });
+                    }
+                    break;
+                }
+              });
+
+              return (
+                <>
+                  {Object.entries(userTypeGroups).map(([userType, providers]) => (
+                    <div key={userType} className="border rounded-lg p-3">
+                      <div className="font-medium mb-2">{userType}</div>
+                      <div className="ml-4 space-y-2">
+                        {providers.map((item, idx) => {
+                          const Icon = item.icon;
+                          const isLast = idx === providers.length - 1;
+
+                          return (
+                            <div key={idx} className={!isLast ? "pb-2 border-b border-border" : ""}>
+                              <div className="flex items-center gap-2">
+                                {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                                <div className="font-medium text-sm">{item.provider}</div>
+                                {item.tooltip && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-xs">
+                                        <p className="text-sm">{item.tooltip}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              );
             })()}
           </CardContent>
         </Card>
@@ -208,49 +340,119 @@ const ReviewStep = ({ data, onEditStep }: ReviewStepProps) => {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="border rounded-lg p-3">
-              <h4 className="font-medium mb-2">{data.projectInfo.productName || 'Product'}</h4>
-              <div className="space-y-1 text-sm">
-                <div>
-                  <span className="font-medium">Environments:</span>{' '}
-                  {[
-                    data.configuration.development && 'Development',
-                    data.configuration.test && 'Test', 
-                    data.configuration.production && 'Production'
-                  ].filter(Boolean).join(', ')}
-                </div>
-                {data.configuration.development && (
-                  <div>
-                    <span className="font-medium">Dev App:</span> {data.configuration.developmentConfig?.applicationName}
+            {(() => {
+              // Check if we have coupled credentials
+              const dataClassification = data.requirements.dataClassification || "";
+              const hasBCResidents = data.projectInfo.userTypes.includes("BC residents");
+              const hasCoupledCredentials = hasBCResidents &&
+                (dataClassification === "protected-a" || dataClassification === "protected-b" || dataClassification === "protected-c");
+
+              const selectedEnvironments = [
+                data.configuration.development && 'Development',
+                data.configuration.test && 'Test',
+                data.configuration.production && 'Production'
+              ].filter(Boolean).join(', ');
+
+              // Check which IDPs were recommended
+              const recommendedIDPs = data.solution.components || [];
+              const hasBCSC = recommendedIDPs.some(c => c.toLowerCase().includes('bc services card') || c.toLowerCase().includes('bcsc'));
+              const hasPersonCredential = recommendedIDPs.some(c => c.toLowerCase().includes('person credential'));
+
+              // Single configuration display for all cases
+              return (
+                <>
+                  <div className="border rounded-lg p-3">
+                    <h4 className="font-medium mb-2">{data.projectInfo.productName || 'Product'}</h4>
+                    <div className="space-y-1 text-sm">
+                      <div>
+                        <span className="font-medium">Environments:</span> {selectedEnvironments}
+                      </div>
+                      {data.configuration.development && (
+                        <div>
+                          <span className="font-medium">Dev App:</span> {data.configuration.developmentConfig?.applicationName}
+                        </div>
+                      )}
+                      {data.configuration.test && (
+                        <div>
+                          <span className="font-medium">Test App:</span> {data.configuration.testConfig?.applicationName}
+                        </div>
+                      )}
+                      {data.configuration.production && (
+                        <div>
+                          <span className="font-medium">Prod App:</span> {data.configuration.productionConfig?.applicationName}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-                {data.configuration.test && (
-                  <div>
-                    <span className="font-medium">Test App:</span> {data.configuration.testConfig?.applicationName}
-                  </div>
-                )}
-                {data.configuration.production && (
-                  <div>
-                    <span className="font-medium">Prod App:</span> {data.configuration.productionConfig?.applicationName}
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {data.requirements.requiredAttributes && data.requirements.requiredAttributes.length > 0 && (
-              <>
-                <Separator className="my-3" />
-                
-                <div className="space-y-2">
-                  <div className="font-medium text-sm">Attributes</div>
-                  <div className="flex flex-wrap gap-1">
-                    {data.requirements.requiredAttributes.map((attr) => (
-                      <Badge key={attr} variant="outline">{attr}</Badge>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
+
+                  {/* Attribute Selection Display */}
+                  {(hasBCSC || hasPersonCredential) && (
+                    <>
+                      <Separator className="my-3" />
+                      <div className="border rounded-lg p-3">
+                        <h4 className="font-medium mb-2">
+                          {hasPersonCredential ? "BC Services Card & Person Credential" : "BC Services Card"}
+                        </h4>
+                        <div className="space-y-2 text-sm">
+                          {data.configuration.attributePackage && !data.configuration.selectedCustomAttributes?.length && (
+                            // Scenario 1: Package only
+                            <>
+                              <div>
+                                <span className="font-medium">Attribute Package:</span>{' '}
+                                {ATTRIBUTE_PACKAGES[data.configuration.attributePackage as keyof typeof ATTRIBUTE_PACKAGES]?.label}
+                              </div>
+                              <div className="text-muted-foreground">
+                                Included attributes: {ATTRIBUTE_PACKAGES[data.configuration.attributePackage as keyof typeof ATTRIBUTE_PACKAGES]?.description}
+                              </div>
+                            </>
+                          )}
+
+                          {!data.configuration.attributePackage && data.configuration.selectedCustomAttributes && data.configuration.selectedCustomAttributes.length > 0 && (
+                            // Scenario 2: Custom attributes only
+                            <>
+                              <div className="font-medium mb-1">Custom Attributes Selected:</div>
+                              <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
+                                {data.configuration.selectedCustomAttributes.slice(0, 7).map((attrValue) => {
+                                  const attr = ALL_ATTRIBUTES.find(a => a.value === attrValue);
+                                  return (
+                                    <li key={attrValue}>{attr?.label || attrValue}</li>
+                                  );
+                                })}
+                                {data.configuration.selectedCustomAttributes.length > 7 && (
+                                  <li className="text-xs">and {data.configuration.selectedCustomAttributes.length - 7} more...</li>
+                                )}
+                              </ul>
+                            </>
+                          )}
+
+                          {data.configuration.attributePackage && data.configuration.selectedCustomAttributes && data.configuration.selectedCustomAttributes.length > 0 && (
+                            // Scenario 3: Both package and custom attributes
+                            <>
+                              <div>
+                                <span className="font-medium">Base Package:</span>{' '}
+                                {ATTRIBUTE_PACKAGES[data.configuration.attributePackage as keyof typeof ATTRIBUTE_PACKAGES]?.label}
+                              </div>
+                              <div className="font-medium mt-2">Additional Attributes:</div>
+                              <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
+                                {data.configuration.selectedCustomAttributes.slice(0, 5).map((attrValue) => {
+                                  const attr = ALL_ATTRIBUTES.find(a => a.value === attrValue);
+                                  return (
+                                    <li key={attrValue}>{attr?.label || attrValue}</li>
+                                  );
+                                })}
+                                {data.configuration.selectedCustomAttributes.length > 5 && (
+                                  <li className="text-xs">and {data.configuration.selectedCustomAttributes.length - 5} more...</li>
+                                )}
+                              </ul>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>
